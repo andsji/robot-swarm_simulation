@@ -305,6 +305,12 @@ class Robot:
         # Example: move forward
         self.set_rotation_and_speed(0, MAX_SPEED * 0.5)
 
+    
+        if self.id ==0:
+            for reading in self.prox_readings:
+                if reading['type'] is not None:
+                    print(f"distance to {reading['type']} {reading['distance']:.01f}")
+
     def draw(self, screen):
         # --- IR proximity sensors ---
         for i, reading in enumerate(self.prox_readings):
