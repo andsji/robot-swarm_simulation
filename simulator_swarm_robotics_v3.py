@@ -310,6 +310,7 @@ class Robot:
             for reading in self.prox_readings:
                 if reading['type'] is not None:
                     print(f"distance to {reading['type']} {reading['distance']:.01f}")
+        print(self.prox_angles)
 
     def draw(self, screen):
         # --- IR proximity sensors ---
