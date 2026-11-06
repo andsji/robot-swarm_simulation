@@ -1,7 +1,8 @@
 import pygame
 import numpy as np
-
+import random
 # Pygame setup
+
 WIDTH, HEIGHT = 800, 600
 BG_COLOR = (30, 30, 30)
 ROBOT_COLOR = (200, 255, 255)
@@ -39,7 +40,7 @@ RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
 
 # Parameters
-NUM_ROBOTS = 25
+NUM_ROBOTS = 15
 ROBOT_RADIUS = 10
 
 NUM_PROX_SENSORS = 6
@@ -315,19 +316,53 @@ class Robot:
         sensordir = np.pi / NUM_PROX_SENSORS + np.linspace(0, 2 * np.pi, NUM_PROX_SENSORS, endpoint=False)
         speed = 0
         dir = 0
-        for i in range(len(self.prox_readings)):
-            if self.prox_readings[i]['type'] is not None:
-                dist = self.prox_readings[i]['distance']
-                reading = float(60-dist)
-                if self.prox_readings[i]['type']=="wall"and dist<10:
-                    scaled_reading = 2
-                else: 
-                    scaled_reading = reading/60
-                speed += 0 if (reading / 60) < 0.1 else scaled_reading
-                dir += sensordir[(i+3)%6]*scaled_reading
-        speed = 0.8 if speed>0.8 else speed
 
-        self.set_rotation_and_speed(dir, MAX_SPEED * speed/2)
+        n = len(self.prox_readings)
+
+        is_wall = [
+            r["type"] is not None and "wall" in str(r["type"]).lower()
+            for r in self.prox_readings
+        ]
+
+        ignore_sensor = [False] * n
+        if all(is_wall):
+            ignore_sensor = [i != 0 for i in range(n)]
+        else:
+            for i in range(n):
+                if is_wall[i] and not is_wall[(i - 1) % n]:
+                    run_idx = []
+                    curr = i
+                    while is_wall[curr]:
+                        run_idx.append(curr)
+                        curr = (curr + 1) % n
+                    
+                    if len(run_idx) >= 3:
+                        mid_idx = run_idx[len(run_idx) // 2]
+                        for idx in run_idx:
+                            if idx != mid_idx:
+                                ignore_sensor[idx] = True
+
+        for i in range(n):
+            if ignore_sensor[i]:
+                continue
+
+            if self.prox_readings[i]["type"] is not None:
+                dist = self.prox_readings[i]["distance"]
+                reading = float(60 - dist)
+                if is_wall[i] and dist < 20:
+                    scaled_reading = 2
+                else:
+                    scaled_reading = reading / 60
+
+                dir += sensordir[(i + 4) % n] * scaled_reading
+        
+        speed = 0.8 if speed>0.8 else max(speed,0.1)
+        
+        alone = all(r["type"] is None for r in self.prox_readings)
+        if alone:
+            dir = random.uniform(0,2*np.pi)
+            speed= 0.3
+        self.set_rotation_and_speed(dir, MAX_SPEED * speed)
         
         #print(self.prox_angles)
 
