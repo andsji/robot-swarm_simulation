@@ -314,12 +314,14 @@ class Robot:
         # self.set_rotation_and_speed(dir, MAX_SPEED * speed)
         sensordir = np.pi / NUM_PROX_SENSORS + np.linspace(0, 2 * np.pi, NUM_PROX_SENSORS, endpoint=False)
         
-        
+        speed = 0
         dir = 0
         for i in range(len(self.prox_readings)):
             if self.prox_readings[i]['type'] is not None:
                 reading = float(60-self.prox_readings[i]['distance'])
                 scaled_reading = reading/60
+                print(scaled_reading)
+                #speed +=  reading/60 
                 dir += sensordir[(i+3)%6]*scaled_reading
         self.set_rotation_and_speed(dir, MAX_SPEED * 0.5)
          
