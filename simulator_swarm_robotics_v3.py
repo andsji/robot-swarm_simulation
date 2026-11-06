@@ -39,7 +39,7 @@ RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
 
 # Parameters
-NUM_ROBOTS = 2
+NUM_ROBOTS = 8
 ROBOT_RADIUS = 10
 
 NUM_PROX_SENSORS = 6
@@ -303,14 +303,27 @@ class Robot:
             DO NOT modify move()
             """
         # Example: move forward
-        self.set_rotation_and_speed(0, MAX_SPEED * 0.5)
+        
+        # dir = 0
+        # speed = 0.7
 
-    
-        if self.id ==0:
-            for reading in self.prox_readings:
-                if reading['type'] is not None:
-                    print(f"distance to {reading['type']} {reading['distance']:.01f}")
-        print(self.prox_angles)
+        # for r in self.prox_readings:
+        #     if r['type']is not None:
+        #         dir = 1
+        #         speed = 0.3
+        # self.set_rotation_and_speed(dir, MAX_SPEED * speed)
+        sensordir = np.pi / NUM_PROX_SENSORS + np.linspace(0, 2 * np.pi, NUM_PROX_SENSORS, endpoint=False)
+        
+        
+        dir = 0
+        for i in range(len(self.prox_readings)):
+            if self.prox_readings[i]['type'] is not None:
+                reading = float(60-self.prox_readings[i]['distance'])
+                scaled_reading = reading/60
+                dir += sensordir[(i+3)%6]*scaled_reading
+        self.set_rotation_and_speed(dir, MAX_SPEED * 0.5)
+         
+        #print(self.prox_angles)
 
     def draw(self, screen):
         # --- IR proximity sensors ---
