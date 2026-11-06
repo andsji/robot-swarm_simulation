@@ -39,7 +39,7 @@ RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
 
 # Parameters
-NUM_ROBOTS = 8
+NUM_ROBOTS = 25
 ROBOT_RADIUS = 10
 
 NUM_PROX_SENSORS = 6
@@ -313,18 +313,22 @@ class Robot:
         #         speed = 0.3
         # self.set_rotation_and_speed(dir, MAX_SPEED * speed)
         sensordir = np.pi / NUM_PROX_SENSORS + np.linspace(0, 2 * np.pi, NUM_PROX_SENSORS, endpoint=False)
-        
         speed = 0
         dir = 0
         for i in range(len(self.prox_readings)):
             if self.prox_readings[i]['type'] is not None:
-                reading = float(60-self.prox_readings[i]['distance'])
-                scaled_reading = reading/60
-                print(scaled_reading)
-                #speed +=  reading/60 
+                dist = self.prox_readings[i]['distance']
+                reading = float(60-dist)
+                if self.prox_readings[i]['type']=="wall"and dist<10:
+                    scaled_reading = 2
+                else: 
+                    scaled_reading = reading/60
+                speed += 0 if (reading / 60) < 0.1 else scaled_reading
                 dir += sensordir[(i+3)%6]*scaled_reading
-        self.set_rotation_and_speed(dir, MAX_SPEED * 0.5)
-         
+        speed = 0.8 if speed>0.8 else speed
+
+        self.set_rotation_and_speed(dir, MAX_SPEED * speed/2)
+        
         #print(self.prox_angles)
 
     def draw(self, screen):
