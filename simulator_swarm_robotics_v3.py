@@ -39,7 +39,7 @@ RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
 
 # Parameters
-NUM_ROBOTS = 2
+NUM_ROBOTS = 7
 ROBOT_RADIUS = 10
 
 NUM_PROX_SENSORS = 6
@@ -302,8 +302,26 @@ class Robot:
             DO NOT modify robot._linear_velocity or robot._angular_velocity directly.
             DO NOT modify move()
             """
-        # Example: move forward
-        self.set_rotation_and_speed(0, MAX_SPEED * 0.5)
+        THRESHOLD = 50.0
+        turn = 0
+        speed = MAX_SPEED * 0.5
+
+        for i, reading in enumerate(self.prox_readings):
+            if reading["type"] is not None:
+                dist = reading["distance"]
+                if dist < THRESHOLD/2:
+                    speed = speed/2
+                if dist < THRESHOLD:
+                    turn -= np.sin(self.prox_angles[i]) * (1 - dist / THRESHOLD)
+        
+        turn = np.clip(turn, -np.pi/2, np.pi/2)
+        self.set_rotation_and_speed(turn, speed)
+
+        
+
+         # Example: move forward
+        #self.set_rotation_and_speed(0, MAX_SPEED * 0.5)
+
 
     def draw(self, screen):
         # --- IR proximity sensors ---
