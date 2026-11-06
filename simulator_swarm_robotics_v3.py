@@ -302,17 +302,21 @@ class Robot:
             DO NOT modify robot._linear_velocity or robot._angular_velocity directly.
             DO NOT modify move()
             """
-        THRESHOLD = 50.0
+        THRESHOLD = 60.0
         turn = 0
         speed = MAX_SPEED * 0.5
 
         for i, reading in enumerate(self.prox_readings):
-            if reading["type"] is not None:
+            type = reading["type"]
+            if type is not None:
                 dist = reading["distance"]
                 if dist < THRESHOLD/2:
                     speed = speed/2
                 if dist < THRESHOLD:
-                    turn -= np.sin(self.prox_angles[i]) * (1 - dist / THRESHOLD)
+                    if type == "wall": # TODO: add behavor to change direction when going straight for a wall.
+                        turn -= np.sin(self.prox_angles[i]) * (1 - dist / THRESHOLD)
+                    else:    
+                        turn -= np.sin(self.prox_angles[i]) * (1 - dist / THRESHOLD)
         
         turn = np.clip(turn, -np.pi/2, np.pi/2)
         self.set_rotation_and_speed(turn, speed)
