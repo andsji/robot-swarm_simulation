@@ -288,41 +288,89 @@ class Robot:
     def controller_init(self):
         pass
 
+
     def robot_controller(self):
-        """
-            Implement your control logic here.
-            This function is called once every control cycle (every CONTROL_DT simulated seconds),
-            right after the sensors (incl. received RAB messages) have been updated.
-            You can access:
-            - self.prox_readings: proximity sensor data
-            - self.light_intensity: light at current location
-            - self.rab_signals: list of received messages from other robots
+#     """
+    #         Implement your control logic here.
+    #         This function is called once every control cycle (every CONTROL_DT simulated seconds),
+    #         right after the sensors (incl. received RAB messages) have been updated.
+    #         You can access:
+    #         - self.prox_readings: proximity sensor data
+    #         - self.light_intensity: light at current location
+    #         - self.rab_signals: list of received messages from other robots
 
-            Use only self.set_rotation_and_speed(...) to move the robot.
+    #         Use only self.set_rotation_and_speed(...) to move the robot.
 
-            DO NOT modify robot._linear_velocity or robot._angular_velocity directly.
-            DO NOT modify move()
-            """
-        # Example: move forward
+    #         DO NOT modify robot._linear_velocity or robot._angular_velocity directly.
+    #         DO NOT modify move()
+    #         """
+    #     # Example: move forward
         
-        # dir = 0
-        # speed = 0.7
+    #     # dir = 0
+    #     # speed = 0.7
 
-        # for r in self.prox_readings:
-        #     if r['type']is not None:
-        #         dir = 1
-        #         speed = 0.3
-        # self.set_rotation_and_speed(dir, MAX_SPEED * speed)
+    #     # for r in self.prox_readings:
+    #     #     if r['type']is not None:
+    #     #         dir = 1
+    #     #         speed = 0.3
+    #     # self.set_rotation_and_speed(dir, MAX_SPEED * speed)
+    #     sensordir = np.pi / NUM_PROX_SENSORS + np.linspace(0, 2 * np.pi, NUM_PROX_SENSORS, endpoint=False)
+    #     speed = 0
+    #     dir = 0
+
+    #     n = len(self.prox_readings)
+
+    #     is_wall = [
+    #         r["type"] is not None and "wall" in str(r["type"]).lower()
+    #         for r in self.prox_readings
+    #     ]
+
+    #     ignore_sensor = [False] * n
+    #     if all(is_wall):
+    #         ignore_sensor = [i != 0 for i in range(n)]
+    #     else:
+    #         for i in range(n):
+    #             if is_wall[i] and not is_wall[(i - 1) % n]:
+    #                 run_idx = []
+    #                 curr = i
+    #                 while is_wall[curr]:
+    #                     run_idx.append(curr)
+    #                     curr = (curr + 1) % n
+                    
+    #                 if len(run_idx) >= 3:
+    #                     mid_idx = run_idx[len(run_idx) // 2]
+    #                     for idx in run_idx:
+    #                         if idx != mid_idx:
+    #                             ignore_sensor[idx] = True
+
+    #     for i in range(n):
+    #         if ignore_sensor[i]:
+    #             continue
+
+    #         if self.prox_readings[i]["type"] is not None:
+    #             dist = self.prox_readings[i]["distance"]
+    #             reading = float(60 - dist)
+    #             sensor_angle = sensordir[i]
+    #             dir += np.sin(sensor_angle + np.pi) * scaled_reading
+        
+    #     speed = 0.8 if speed>0.8 else max(speed,0.1)
+        
+    #     alone = all(r["type"] is None for r in self.prox_readings)
+    #     if alone:
+    #         dir = random.uniform(0,2*np.pi)
+    #         speed= 0.3
+    #     self.set_rotation_and_speed(dir, MAX_SPEED * speed)
+        
+    #     #print(self.prox_angles)
         sensordir = np.pi / NUM_PROX_SENSORS + np.linspace(0, 2 * np.pi, NUM_PROX_SENSORS, endpoint=False)
-        speed = 0
-        dir = 0
-
         n = len(self.prox_readings)
-
         is_wall = [
-            r["type"] is not None and "wall" in str(r["type"]).lower()
-            for r in self.prox_readings
-        ]
+                r["type"] is not None and "wall" in str(r["type"]).lower()
+                for r in self.prox_readings
+            ]
+        
+        avoid_turn = 0.0
+        avoid_weight = 0.0
 
         ignore_sensor = [False] * n
         if all(is_wall):
@@ -343,28 +391,54 @@ class Robot:
                                 ignore_sensor[idx] = True
 
         for i in range(n):
+
             if ignore_sensor[i]:
                 continue
+            reading = self.prox_readings[i]
+            if reading["type"] in ["wall", "obstacle"]:
+                dist = reading["distance"]
+                scaled_reading = max(0.0, (PROX_SENSOR_RANGE - dist) / PROX_SENSOR_RANGE)
+                if i ==0 or i== 5:
+                    if dist<12:
+                        scaled_reading = 2
+                sensor_angle = sensordir[i]
+                avoid_turn += np.sin(sensor_angle + np.pi) * scaled_reading
+                avoid_weight += scaled_reading
 
-            if self.prox_readings[i]["type"] is not None:
-                dist = self.prox_readings[i]["distance"]
-                reading = float(60 - dist)
-                if is_wall[i] and dist < 20:
-                    scaled_reading = 2
-                else:
-                    scaled_reading = reading / 60
+        align_turn = 0.0
+        cohesion_turn = 0.0
+        separation_turn = 0.0
+        flock_count = len(self.rab_signals)
 
-                dir += sensordir[(i + 4) % n] * scaled_reading
-        
-        speed = 0.8 if speed>0.8 else max(speed,0.1)
-        
-        alone = all(r["type"] is None for r in self.prox_readings)
-        if alone:
-            dir = random.uniform(0,2*np.pi)
-            speed= 0.3
-        self.set_rotation_and_speed(dir, MAX_SPEED * speed)
-        
-        #print(self.prox_angles)
+        for signal in self.rab_signals:
+            dist = signal['distance']
+            bearing = signal['bearing'] 
+            neighbor_heading = signal['message']['heading']
+
+            rel_heading = self.get_relative_heading(neighbor_heading)
+            align_turn += rel_heading
+            
+            cohesion_turn += np.sin(bearing)
+            
+            if dist < 50:
+                sep_weight = (50 - dist) / 50
+                separation_turn += np.sin(bearing + np.pi) * sep_weight
+
+        if flock_count > 0:
+            align_turn /= flock_count
+            cohesion_turn /= flock_count
+            separation_turn /= flock_count
+
+        av_w,sep_w,ali_w,coh_w= 2, 5, 1, 1
+        final_turn = avoid_turn*av_w + separation_turn*sep_w + align_turn*ali_w + cohesion_turn*coh_w
+                     
+        base_speed = 0.4
+
+        if avoid_weight == 0 and flock_count == 0:
+            final_turn = random.uniform(-0.3, 0.3)
+            base_speed = 0.3
+
+        self.set_rotation_and_speed(final_turn, MAX_SPEED * base_speed)
 
     def draw(self, screen):
         # --- IR proximity sensors ---
