@@ -39,6 +39,9 @@ ARENA_BOUNDS = {
     'bottom': HEIGHT
 }
 
+# 5x5 grid for logging robot positions for experiments
+GRID = np.zeros((5, 5), dtype=int)
+
 # Random seed: set once when the program starts (used for initial positions, noise, etc.)
 RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
@@ -172,6 +175,11 @@ class Robot:
         dx += np.random.normal(0, MOTION_NOISE_STD)
         dy += np.random.normal(0, MOTION_NOISE_STD)
         self._pos += np.array([dx, dy])
+
+        # Update the grid position for logging
+        grid_x = int(self._pos[0] / (WIDTH / 5))
+        grid_y = int(self._pos[1] / (HEIGHT / 5))
+        GRID[grid_x, grid_y] += 1
 
         # Arena bounds clipping
         self._pos[0] = np.clip(
@@ -660,6 +668,9 @@ def main():
                 txt = font.render("PAUSED", True, (255, 100, 100))
                 screen.blit(txt, (10, 10))
             pygame.display.flip()
+
+    # Save the GRID data to a CSV file for analysis
+    np.savetxt("robot_position_grid.csv", GRID, delimiter=",", fmt='%d')
 
     pygame.quit()
     logging_close()
