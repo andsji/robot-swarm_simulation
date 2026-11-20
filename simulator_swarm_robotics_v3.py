@@ -2,6 +2,10 @@ import pygame
 import numpy as np
 import random
 import csv
+
+# Logging setup
+log_file = None
+csv_writer = None
 # Pygame setup
 
 WIDTH, HEIGHT = 800, 600
@@ -468,7 +472,7 @@ class Robot:
         base_speed = 0.4
 
         # TRUE = FLOCKING, FALSE = DISPERSION
-        flocking = False
+        flocking = True
 
         if flocking:
             av_w, sep_w, ali_w, coh_w = 2, 5, 1, 1
@@ -573,9 +577,6 @@ def draw_headless_banner(screen, paused, total_time):
         screen.blit(surf, surf.get_rect(center=(WIDTH // 2, y)))
         y += surf.get_height() + 15
     pygame.display.flip()
-
-log_file = None
-csv_writer = None
 
 def logging_init(): #initialize your log file
     global log_file, csv_writer
