@@ -433,12 +433,14 @@ class Robot:
                             if idx != mid_idx:
                                 ignore_sensor[idx] = False
 
+
         for i in range(n):
 
-            if ignore_sensor[i]:
-                continue
+            # if ignore_sensor[i]:
+            #     continue
             reading = self.prox_readings[i]
-            if reading["type"] in ["wall", "obstacle"]:
+            obs_set = ["wall", "obstacle"] if FLOCKING else ["wall", "obstacle", "robots"]
+            if reading["type"] in obs_set:
                 dist = reading["distance"]
                 scaled_reading = max(
                     0.0, (PROX_SENSOR_RANGE - dist) / PROX_SENSOR_RANGE)
@@ -474,17 +476,16 @@ class Robot:
             separation_turn /= flock_count
 
         base_speed = 0.4
-
         if FLOCKING:
-            av_w, sep_w, ali_w, coh_w = 2, 5, 1, 1
+            av_w, sep_w, ali_w, coh_w = 4, 3, 1, 1
             final_turn = avoid_turn*av_w + separation_turn * \
                 sep_w + align_turn*ali_w + cohesion_turn*coh_w
-            if avoid_weight == 0 and flock_count == 0:
-                final_turn = random.uniform(-0.3, 0.3)
-                base_speed = 0.3
         else:
             final_turn = avoid_turn
 
+        if avoid_weight == 0 and flock_count == 0:
+            final_turn = random.uniform(-0.3, 0.3)
+            base_speed = 0.3
         # double speed when no light detected
         if self.light_intensity < 0.1:
             base_speed *= 2
@@ -619,6 +620,7 @@ def compute_metrics(robots): # pass as many arguments as you need and compute re
 
 
 def main():
+    print(f"Flocking is {"enabled" if FLOCKING else "disabled"}")
     clock = pygame.time.Clock()
     dt = SIM_DT
     robots = []
