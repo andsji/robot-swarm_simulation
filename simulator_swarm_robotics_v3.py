@@ -1,5 +1,6 @@
 import pygame
 import numpy as np
+import csv
 
 # Pygame setup
 WIDTH, HEIGHT = 800, 600
@@ -382,17 +383,46 @@ def draw_headless_banner(screen, paused, total_time):
         y += surf.get_height() + 15
     pygame.display.flip()
 
+log_file = None
+csv_writer = None
+
 def logging_init(): #initialize your log file
-    pass
+    global log_file, csv_writer
+    
+    log_file = open("simulation_log.csv", "w", newline="")
+    csv_writer = csv.writer(log_file)
+
+    csv_writer.writerow([
+        "frame",
+        "simulation_time",
+        "alignment"
+    ])
+    
+
 
 def log_metrics(frame_count, total_time, metrics): # write to your log file
-    pass
+    csv_writer.writerow([
+        frame_count,
+        total_time,
+        metrics["alignment"]
+    ])
 
 def logging_close(): # close your log file
-    pass
+    global log_file
 
-def compute_metrics(): # pass as many arguments as you need and compute relevant metrics to be logged for performance analysis
-    return []
+    if log_file is not None:
+        log_file.close()
+        log_file = None
+
+def compute_metrics(robots): # pass as many arguments as you need and compute relevant metrics to be logged for performance analysis
+    headings = np.array([r._heading for r in robots])
+
+    alignment = np.sqrt(
+        np.mean(np.cos(headings))**2 +
+        np.mean(np.sin(headings))**2
+    )
+
+    return {"alignment": alignment}
 
 
 def main():
@@ -458,7 +488,7 @@ def main():
             for robot in robots:
                 robot.move(dt)
 
-            metrics = compute_metrics()
+            metrics = compute_metrics(robots)
             log_metrics(frame_count, total_time, metrics)
 
             frame_count += 1
