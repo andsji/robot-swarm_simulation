@@ -110,15 +110,15 @@ class Obstacle:
 
 
 OBSTACLES = [
-    Obstacle(pos=(200, 150), radius=20),
-    Obstacle(pos=(600, 120), radius=30),
+    # Obstacle(pos=(200, 150), radius=20),
+    # Obstacle(pos=(600, 120), radius=30),
 ]
 
 LIGHT_SOURCES = [
-    LightSource(pos=(100, 100), intensity=1.0,
-                core_radius=50, decay_radius=300),
-    LightSource(pos=(700, 500), intensity=0.9,
-                core_radius=10, decay_radius=100)
+    # LightSource(pos=(100, 100), intensity=1.0,
+    #             core_radius=50, decay_radius=300),
+    # LightSource(pos=(700, 500), intensity=0.9,
+    #             core_radius=10, decay_radius=100)
 ]
 
 
@@ -464,21 +464,27 @@ class Robot:
             cohesion_turn /= flock_count
             separation_turn /= flock_count
 
-        av_w, sep_w, ali_w, coh_w = 2, 5, 1, 1
-        final_turn = avoid_turn*av_w + separation_turn * \
-            sep_w + align_turn*ali_w + cohesion_turn*coh_w
-
         base_speed = 0.4
 
-        if avoid_weight == 0 and flock_count == 0:
-            final_turn = random.uniform(-0.3, 0.3)
-            base_speed = 0.3
+        # TRUE = FLOCKING, FALSE = DISPERSION
+        flocking = False
+
+        if flocking:
+            av_w, sep_w, ali_w, coh_w = 2, 5, 1, 1
+            final_turn = avoid_turn*av_w + separation_turn * \
+                sep_w + align_turn*ali_w + cohesion_turn*coh_w
+            if avoid_weight == 0 and flock_count == 0:
+                final_turn = random.uniform(-0.3, 0.3)
+                base_speed = 0.3
+        else:
+            final_turn = avoid_turn
 
         # double speed when no light detected
         if self.light_intensity < 0.1:
             base_speed *= 2
 
-        self.set_rotation_and_speed(final_turn, MAX_SPEED * base_speed)
+        self.set_rotation_and_speed(final_turn, min(
+            MAX_SPEED * base_speed, MAX_SPEED))
 
     def draw(self, screen):
         # --- IR proximity sensors ---
