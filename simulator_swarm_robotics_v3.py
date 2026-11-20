@@ -472,6 +472,8 @@ def main():
     clock = pygame.time.Clock()
     dt = SIM_DT
     robots = []
+    # 5x5 grid for logging robot positions for experiments
+    GRID = np.zeros((5, 5), dtype=int)
 
     for i in range(NUM_ROBOTS):
         pos = np.random.uniform([ROBOT_RADIUS, ROBOT_RADIUS], [
@@ -535,6 +537,20 @@ def main():
             # Physics (motion) is simulated every sim step
             for robot in robots:
                 robot.move(dt)
+                # Calculate the amount of robots currently in each grid and save it to a csv file.
+                # We need to save every frame to the csv file, so we can later calculate the median amount of robots in each grid.
+                # We then reset the grid to 0 for the next frame.
+                grid_x = int(robot._pos[0] / (WIDTH / GRID.shape[1]))
+                grid_y = int(robot._pos[1] / (HEIGHT / GRID.shape[0]))
+                grid_x = np.clip(grid_x, 0, GRID.shape[1] - 1)
+                grid_y = np.clip(grid_y, 0, GRID.shape[0] - 1)
+                GRID[grid_y, grid_x] += 1
+
+            # save the grid to the .csv file on a single line, so we can later calculate the median amount of robots in each grid.
+            with open("robot_position_grid.csv", "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(GRID.flatten())
+            GRID.fill(0)  # Reset the grid for the next frame
 
             metrics = compute_metrics()
             log_metrics(frame_count, total_time, metrics)
