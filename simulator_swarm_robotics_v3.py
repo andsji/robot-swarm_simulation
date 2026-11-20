@@ -6,6 +6,10 @@ import csv
 # Logging setup
 log_file = None
 csv_writer = None
+
+# TRUE = FLOCKING, FALSE = DISPERSION
+FLOCKING = True
+
 # Pygame setup
 
 WIDTH, HEIGHT = 800, 600
@@ -471,10 +475,7 @@ class Robot:
 
         base_speed = 0.4
 
-        # TRUE = FLOCKING, FALSE = DISPERSION
-        flocking = True
-
-        if flocking:
+        if FLOCKING:
             av_w, sep_w, ali_w, coh_w = 2, 5, 1, 1
             final_turn = avoid_turn*av_w + separation_turn * \
                 sep_w + align_turn*ali_w + cohesion_turn*coh_w
