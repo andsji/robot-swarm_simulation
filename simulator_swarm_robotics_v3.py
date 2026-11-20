@@ -396,6 +396,8 @@ class Robot:
         #     self.set_rotation_and_speed(dir, MAX_SPEED * speed)
 
         #     #print(self.prox_angles)
+        flocking = False
+
         sensordir = np.pi / NUM_PROX_SENSORS + \
             np.linspace(0, 2 * np.pi, NUM_PROX_SENSORS, endpoint=False)
         n = len(self.prox_readings)
@@ -430,7 +432,8 @@ class Robot:
             if ignore_sensor[i]:
                 continue
             reading = self.prox_readings[i]
-            if reading["type"] in ["wall", "obstacle"]:
+            obs_set = ["wall", "obstacle"] if flocking  else ["wall", "obstacle","robot"]
+            if reading["type"] in obs_set:
                 dist = reading["distance"]
                 scaled_reading = max(
                     0.0, (PROX_SENSOR_RANGE - dist) / PROX_SENSOR_RANGE)
@@ -468,7 +471,6 @@ class Robot:
         base_speed = 0.4
 
         # TRUE = FLOCKING, FALSE = DISPERSION
-        flocking = False
 
         if flocking:
             av_w, sep_w, ali_w, coh_w = 2, 5, 1, 1
