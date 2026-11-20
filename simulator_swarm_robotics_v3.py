@@ -48,7 +48,7 @@ RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
 
 # Parameters
-NUM_ROBOTS = 15
+NUM_ROBOTS = 50
 ROBOT_RADIUS = 10
 
 NUM_PROX_SENSORS = 6
@@ -176,11 +176,6 @@ class Robot:
         dx += np.random.normal(0, MOTION_NOISE_STD)
         dy += np.random.normal(0, MOTION_NOISE_STD)
         self._pos += np.array([dx, dy])
-
-        # Update the grid position for logging
-        grid_x = int(self._pos[0] / (WIDTH / 5))
-        grid_y = int(self._pos[1] / (HEIGHT / 5))
-        GRID[grid_x, grid_y] += 1
 
         # Arena bounds clipping
         self._pos[0] = np.clip(
@@ -432,7 +427,8 @@ class Robot:
             if ignore_sensor[i]:
                 continue
             reading = self.prox_readings[i]
-            obs_set = ["wall", "obstacle"] if flocking  else ["wall", "obstacle","robot"]
+            obs_set = ["wall", "obstacle"] if flocking else [
+                "wall", "obstacle", "robot"]
             if reading["type"] in obs_set:
                 dist = reading["distance"]
                 scaled_reading = max(
@@ -576,12 +572,14 @@ def draw_headless_banner(screen, paused, total_time):
         y += surf.get_height() + 15
     pygame.display.flip()
 
+
 log_file = None
 csv_writer = None
 
-def logging_init(): #initialize your log file
+
+def logging_init():  # initialize your log file
     global log_file, csv_writer
-    
+
     log_file = open("simulation_log.csv", "w", newline="")
     csv_writer = csv.writer(log_file)
 
@@ -590,24 +588,26 @@ def logging_init(): #initialize your log file
         "simulation_time",
         "alignment"
     ])
-    
 
 
-def log_metrics(frame_count, total_time, metrics): # write to your log file
+def log_metrics(frame_count, total_time, metrics):  # write to your log file
     csv_writer.writerow([
         frame_count,
         total_time,
         metrics["alignment"]
     ])
 
-def logging_close(): # close your log file
+
+def logging_close():  # close your log file
     global log_file
 
     if log_file is not None:
         log_file.close()
         log_file = None
 
-def compute_metrics(robots): # pass as many arguments as you need and compute relevant metrics to be logged for performance analysis
+
+# pass as many arguments as you need and compute relevant metrics to be logged for performance analysis
+def compute_metrics(robots):
     headings = np.array([r._heading for r in robots])
 
     alignment = np.sqrt(
@@ -685,8 +685,22 @@ def main():
             # Physics (motion) is simulated every sim step
             for robot in robots:
                 robot.move(dt)
+                # Calculate the amount of robots currently in each grid and save it to a csv file.
+                # We need to save every frame to the csv file, so we can later calculate the median amount of robots in each grid.
+                # We then reset the grid to 0 for the next frame.
+                grid_x = int(robot._pos[0] / (WIDTH / GRID.shape[1]))
+                grid_y = int(robot._pos[1] / (HEIGHT / GRID.shape[0]))
+                grid_x = np.clip(grid_x, 0, GRID.shape[1] - 1)
+                grid_y = np.clip(grid_y, 0, GRID.shape[0] - 1)
+                GRID[grid_y, grid_x] += 1
 
-            metrics = compute_metrics()
+            # save the grid to the .csv file on a single line, so we can later calculate the median amount of robots in each grid.
+            with open("robot_position_grid.csv", "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(GRID.flatten())
+            GRID.fill(0)  # Reset the grid for the next frame
+
+            metrics = compute_metrics(robots)
             log_metrics(frame_count, total_time, metrics)
 
             frame_count += 1
@@ -702,9 +716,6 @@ def main():
                 txt = font.render("PAUSED", True, (255, 100, 100))
                 screen.blit(txt, (10, 10))
             pygame.display.flip()
-
-    # Save the GRID data to a CSV file for analysis
-    np.savetxt("robot_position_grid.csv", GRID, delimiter=",", fmt='%d')
 
     pygame.quit()
     logging_close()
